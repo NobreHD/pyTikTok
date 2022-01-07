@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>pyTikTok</title>
+    <link rel="icon" type="image/png" href="/assets/image/logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        * {
+            scrollbar-width: auto;
+            scrollbar-color: #bababa #454545;
+        }
+        
+        *::-webkit-scrollbar {
+            width: 16px;
+        }
+        
+        *::-webkit-scrollbar-track {
+            background: #454545;
+        }
+        
+        *::-webkit-scrollbar-thumb {
+            background-color: #bababa;
+            border-radius: 5px;
+            border: 3px none #ffffff;
+        }
+        
+        @font-face {
+            font-family: 'Azonix Regular';
+            font-style: normal;
+            font-weight: normal;
+            src: local('Azonix Regular'), url('/assets/font/Azonix.woff') format('woff');
+        }
+        
+        .text {
+            color: white;
+            font-family: "Azonix Regular", sans-serif;
+        }
+        
+        .text:hover {
+            text-decoration: initial;
+            color: white;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        body,
+        .navbar {
+            background-color: black;
+        }
+        
+        .overlay {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            transition: .5s ease;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 69;
+        }
+        
+        #video {
+            max-width: 90%;
+            max-height: 75%;
+            border: #696969 solid 7px;
+            border-radius: 5px;
+        }
+        
+        .main-content {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            overflow-y: scroll;
+            z-index: 5;
+        }
+        
+        #pager * {
+            border-radius: 0!important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="overlay">
+        <video autoplay controls id="video">
+            <source src="/" type="video/mp4">
+        </video>
+    </div>
+    <div>
+        <header>
+            <nav class="navbar fixed-top">
+                <div class="container">
+                    <a class="navbar-brand text" href="/">
+                        <img src="/assets/image/logo.png" alt="logo" idth="64" height="64"></img> &nbsp;TikTok Downloader
+                    </a>
+                    <form class="form-inline" id="download">
+                        <button class="btn btn-outline-danger my-2 my-sm-0 mr-2" type="button" id="remove">Remove Selection</button>
+                        <button class="btn btn-outline-success my-2 my-sm-0">Download All</button>
+                    </form>
+                </div>
+            </nav>
+        </header>
+        <section class="py-5 main-content">
+            <div class="container my-5">
+                <div class="row justify-content-around">
+                    {% for video in videos %}
+                    <div class="col-md-5  m-2">
+                        <div class="card" style="height: 100%;">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <img src="{{ video['video']['cover'] }}" class="img-fluid" alt="Responsive image">
+                                    </div>
+                                    <div class="col-md-9">
+                                        <h5 class="card-title">{{ video['author']['nickname'] }}</h5>
+                                        <p class="card-text">{{ video['desc'] }}</p>
+                                        <a onclick="watch('{{video['video']['playAddr']}}')" class="btn btn-secondary">Watch</a>
+                                        <a id="{{ video['id'] }}" class="btn btn-primary btn-select">Select</a>
+                                        <a href="/download/{{ video['id'] }}" class="btn btn-danger">Download</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %} {% if videos == [] %}
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">No videos found</h5>
+                                <p class="card-text">Please try again later.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <nav aria-label="Page navigation" class="mt-3">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {% if page == 1 %} disabled {% endif %} ">
+                            <a class="page-link bg-dark text-white" href="/page/{{ page-1 }}" tabindex="-1">Previous</a>
+                        </li>
+                        <li class="page-item">
+                            <form class="form-inline bg-dark text-white" id="pager">
+                                <input type="number" class="form-control bg-secondary text-white" value="{{ page }}" min="1">
+                                <button class="btn btn-outline-success" type="submit">Go</button>
+                            </form>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link bg-dark text-white" href="/page/{{ page+1 }}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </section>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        var video = $('#video')[0];
+
+        var watch = function(url) {
+            video.src = url;
+            video.load();
+            $('.overlay').css('display', 'flex');
+            video.play();
+        }
+        $('#video').on('ended', function() {
+            $('.overlay').css('display', 'none');
+        });
+
+        $('.overlay').on('click', function() {
+            video.pause();
+            $('.overlay').css('display', 'none');
+        });
+
+        $('.overlay').children().on('click', function(e) {
+            e.stopPropagation();
+        });
+
+        $('#pager').on('submit', function(e) {
+            e.preventDefault();
+            var page = $(this).children('input').val();
+            window.location.href = '/page/' + page;
+        });
+
+        var getCookies = () => {
+            var cookies = Cookies.get('selected');
+            if (cookies) {
+                return JSON.parse(cookies);
+            } else {
+                return [];
+            }
+        }
+
+        var cookie = getCookies();
+        if (cookie.length > 0) {
+            cookie.forEach(function(id) {
+                $('#' + id).addClass('btn-success');
+                $('#' + id).removeClass('btn-primary');
+                $('#' + id).text('Selected');
+            });
+        } else {
+            $('#download').css('display', "none");
+        }
+
+        $("#download").submit(function(e) {
+            e.preventDefault();
+            window.location.href = "/downloadAll";
+        });
+
+        $("#remove").click(function(e) {
+            Cookies.remove('selected');
+            var oldSelected = $(".btn-success");
+            oldSelected.removeClass('btn-success');
+            oldSelected.addClass('btn-primary');
+            oldSelected.text('Select');
+            $('#download').fadeOut();
+        });
+
+        $(".btn-select").click(function() {
+            var id = $(this).attr("id");
+            var selected = getCookies();
+            if (selected.includes(id)) {
+                selected.splice(selected.indexOf(id), 1);
+                $(this).removeClass("btn-success");
+                $(this).addClass("btn-primary");
+                $(this).text("Select");
+            } else {
+                selected.push(id);
+                $(this).removeClass("btn-primary");
+                $(this).addClass("btn-success");
+                $(this).text("Selected");
+            }
+            if (selected.length < 1) {
+                $('#download').fadeOut();
+            } else {
+                $('#download').fadeIn();
+            }
+            Cookies.set("selected", JSON.stringify(selected));
+        });
+    </script>
+</body>
+
+</html>
